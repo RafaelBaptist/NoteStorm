@@ -11,6 +11,7 @@ import {
   Modal,
   Pressable,
   Switch,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {lightTheme, darkTheme} from '../theme/colors';
@@ -121,30 +122,32 @@ export default function HomeScreen() {
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nova Nota</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Título da nota"
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholderTextColor={isDark ? '#aaa' : '#666'}
-            />
-            <View style={styles.themeToggle}>
-              <Text style={styles.menuItem}>Modo Escuro</Text>
-              <Switch
-                value={theme === 'dark'}
-                onValueChange={toggleTheme}
-                thumbColor={theme === 'dark' ? '#fff' : '#fff'}
-                trackColor={{false: '#ccc', true: '#007bff'}}
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Nova Nota</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Título da nota"
+                value={newTitle}
+                onChangeText={setNewTitle}
+                placeholderTextColor={isDark ? '#aaa' : '#666'}
               />
+              <View style={styles.themeToggle}>
+                <Text style={styles.menuItem}>Modo Escuro</Text>
+                <Switch
+                  value={theme === 'dark'}
+                  onValueChange={toggleTheme}
+                  thumbColor={theme === 'dark' ? '#fff' : '#fff'}
+                  trackColor={{false: '#ccc', true: '#db125f'}}
+                />
+              </View>
+              <Pressable style={styles.modalBtn} onPress={addNote}>
+                <Text style={styles.modalBtnText}>Salvar</Text>
+              </Pressable>
             </View>
-            <Pressable style={styles.modalBtn} onPress={addNote}>
-              <Text style={styles.modalBtnText}>Salvar</Text>
-            </Pressable>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
@@ -222,7 +225,7 @@ const getStyles = (themeColors, isDark) =>
       position: 'absolute',
       bottom: 30,
       right: 30,
-      backgroundColor: '#007bff',
+      backgroundColor: '#db125f',
       width: 60,
       height: 60,
       borderRadius: 30,
@@ -261,7 +264,7 @@ const getStyles = (themeColors, isDark) =>
       color: themeColors.text,
     },
     modalBtn: {
-      backgroundColor: '#007bff',
+      backgroundColor: '#db125f',
       padding: 12,
       borderRadius: 8,
     },
@@ -271,6 +274,8 @@ const getStyles = (themeColors, isDark) =>
       fontWeight: 'bold',
     },
     themeToggle: {
+      marginTop: 20,
+      marginBottom: 20,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
