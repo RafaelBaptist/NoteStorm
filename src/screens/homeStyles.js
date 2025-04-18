@@ -62,6 +62,22 @@ export const getStyles = (themeColors, isDark) =>
       padding: 12,
       borderRadius: 8,
     },
+    addButton: {
+      position: 'absolute',
+      bottom: 20,
+      right: 20,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: '#db125f',
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 5,
+    },
+    addText: {
+      fontSize: 30,
+      color: 'white',
+    },
     modalBtnEdit: {
       backgroundColor: 'rgba(219, 18, 95, 0.6)',
       padding: 8,
@@ -80,5 +96,8 @@ export const getStyles = (themeColors, isDark) =>
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingVertical: 6,
+    },
+    menuItem: {
+      color: themeColors.text,
     },
   });

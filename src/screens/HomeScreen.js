@@ -1,13 +1,5 @@
-import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  FlatList,
-  Pressable,
-  Alert,
-  Image,
-} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {View, Text, TextInput, FlatList, Pressable, Alert} from 'react-native';
 import {useColorScheme} from 'react-native';
 import Header from '../components/Header';
 import NoteCard from '../components/NoteCard';
@@ -15,10 +7,16 @@ import NoteModal from '../components/NoteModal';
 import OptionsModal from '../components/OptionsModal';
 import {getStyles} from '../screens/homeStyles';
 import logo from '../assets/icons/icon.png';
+import {launchImageLibrary} from 'react-native-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {lightTheme, darkTheme} from '../theme/colors';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const [theme, setTheme] = useState(colorScheme);
+  const themeColors = theme === 'dark' ? darkTheme : lightTheme;
+  const styles = getStyles(themeColors, theme === 'dark');
+
   const [notes, setNotes] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
@@ -26,25 +24,51 @@ export default function HomeScreen() {
   const [selectedNoteIndex, setSelectedNoteIndex] = useState(null);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
 
-  const isDark = theme === 'dark';
-  const themeColors = {
-    background: isDark ? '#1e1e1e' : '#fff',
-    text: isDark ? '#fff' : '#000',
-    border: isDark ? '#444' : '#ccc',
-    card: isDark ? '#333' : '#f5f5f5',
-  };
+  useEffect(() => {
+    const loadNotes = async () => {
+      try {
+        const storedNotes = await AsyncStorage.getItem('notes');
+        if (storedNotes) {
+          setNotes(JSON.parse(storedNotes));
+        }
+      } catch (error) {
+        console.log('Erro ao carregar notas do storage:', error);
+      }
+    };
 
-  const styles = getStyles(themeColors, isDark);
+    loadNotes();
+  }, []);
+
+  useEffect(() => {
+    const saveNotes = async () => {
+      try {
+        await AsyncStorage.setItem('notes', JSON.stringify(notes));
+      } catch (error) {
+        console.log('Erro ao salvar notas no storage:', error);
+      }
+    };
+
+    saveNotes();
+  }, [notes]);
 
   const handleSaveNote = () => {
     if (newTitle.trim() === '') return;
-    const newNote = {
-      id: Date.now().toString(),
-      title: newTitle,
-      icon: null,
-      color: themeColors.card,
-    };
-    setNotes([...notes, newNote]);
+
+    if (selectedNoteIndex !== null) {
+      const updatedNotes = [...notes];
+      updatedNotes[selectedNoteIndex].title = newTitle;
+      setNotes(updatedNotes);
+      setSelectedNoteIndex(null);
+    } else {
+      const newNote = {
+        id: Date.now().toString(),
+        title: newTitle,
+        icon: null,
+        color: themeColors.card,
+      };
+      setNotes([...notes, newNote]);
+    }
+
     setNewTitle('');
     setModalVisible(false);
   };
@@ -71,6 +95,7 @@ export default function HomeScreen() {
           updatedNotes.splice(selectedNoteIndex, 1);
           setNotes(updatedNotes);
           setOptionsModalVisible(false);
+          setSelectedNoteIndex(null);
         },
         style: 'destructive',
       },
@@ -93,9 +118,15 @@ export default function HomeScreen() {
   };
 
   const handleImageChange = () => {
-    const updatedNotes = [...notes];
-    updatedNotes[selectedNoteIndex].icon = require('../assets/icons/icon.png'); // exemplo de ícone
-    setNotes(updatedNotes);
+    launchImageLibrary({mediaType: 'photo'}, response => {
+      if (response.didCancel) return;
+      if (response.assets && response.assets.length > 0) {
+        const selectedImageUri = response.assets[0].uri;
+        const updatedNotes = [...notes];
+        updatedNotes[selectedNoteIndex].icon = {uri: selectedImageUri};
+        setNotes(updatedNotes);
+      }
+    });
     setOptionsModalVisible(false);
   };
 
@@ -112,7 +143,7 @@ export default function HomeScreen() {
         placeholder="Pesquisar notas"
         value={searchText}
         onChangeText={setSearchText}
-        placeholderTextColor={themeColors.text}
+        placeholderTextColor={themeColors.placeholder}
       />
 
       <FlatList
@@ -127,20 +158,30 @@ export default function HomeScreen() {
         )}
       />
 
-      <Pressable style={styles.modalBtn} onPress={() => setModalVisible(true)}>
-        <Text style={styles.modalBtnText}>+ Adicionar Nota</Text>
+      <Pressable
+        onPress={() => {
+          setNewTitle('');
+          setSelectedNoteIndex(null);
+          setModalVisible(true);
+        }}
+        style={styles.addButton}>
+        <Text style={styles.addText}>+</Text>
       </Pressable>
 
       <NoteModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedNoteIndex(null);
+          setNewTitle('');
+        }}
         onSave={handleSaveNote}
         newTitle={newTitle}
         setNewTitle={setNewTitle}
         toggleTheme={toggleTheme}
         theme={theme}
         styles={styles}
-        isDark={isDark}
+        isDark={theme === 'dark'}
       />
 
       <OptionsModal
