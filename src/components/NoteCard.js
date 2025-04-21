@@ -1,11 +1,13 @@
 import React from 'react';
 import {TouchableOpacity, Text, Image, View, StyleSheet} from 'react-native';
-
-export default function NoteCard({note, onLongPress, themeColors}) {
+import NoteDetails from './NoteDetails';
+import {NotesProvider} from './NotesContext';
+export default function NoteCard({note, onLongPress, themeColors, onPress}) {
   return (
     <TouchableOpacity
       style={[styles.noteCard, {backgroundColor: themeColors.card}]}
-      onLongPress={onLongPress}>
+      onLongPress={onLongPress}
+      onPress={onPress}>
       {note.icon ? (
         <Image source={note.icon} style={styles.icon} />
       ) : (

@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, TextInput, FlatList, Pressable, Alert} from 'react-native';
 import {useColorScheme} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import Header from '../components/Header';
 import NoteCard from '../components/NoteCard';
 import NoteModal from '../components/NoteModal';
@@ -10,9 +11,12 @@ import logo from '../assets/icons/icon.png';
 import {launchImageLibrary} from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {lightTheme, darkTheme} from '../theme/colors';
+import {NotesContext} from '../components/NotesContext';
+import {NotesProvider} from '../components/NotesContext';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
+  const navigation = useNavigation();
   const [theme, setTheme] = useState(colorScheme);
   const themeColors = theme === 'dark' ? darkTheme : lightTheme;
   const styles = getStyles(themeColors, theme === 'dark');
@@ -108,13 +112,9 @@ export default function HomeScreen() {
   };
 
   const handleColorChange = () => {
-    const updatedNotes = [...notes];
-    updatedNotes[selectedNoteIndex].color =
-      updatedNotes[selectedNoteIndex].color === '#fffae6'
-        ? '#e6f7ff'
-        : '#fffae6';
-    setNotes(updatedNotes);
     setOptionsModalVisible(false);
+    const selectedNote = notes[selectedNoteIndex];
+    navigation.navigate('NoteDetails', {note: selectedNote});
   };
 
   const handleImageChange = () => {
@@ -152,6 +152,11 @@ export default function HomeScreen() {
         renderItem={({item, index}) => (
           <NoteCard
             note={item}
+            onPress={() =>
+              navigation.navigate('NoteDetails', {
+                note: item,
+              })
+            }
             onLongPress={() => handleLongPress(index)}
             themeColors={themeColors}
           />

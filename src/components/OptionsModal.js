@@ -31,7 +31,12 @@ export default function OptionsModal({
               <Text style={styles.modalBtnText}>✏️ Editar conteúdo</Text>
             </Pressable>
 
-            <Pressable style={styles.modalBtnEdit} onPress={onColorChange}>
+            <Pressable
+              style={styles.modalBtnEdit}
+              onPress={() => {
+                onClose();
+                onColorChange();
+              }}>
               <Text style={styles.modalBtnText}>🎨 Editar cor</Text>
             </Pressable>
 
