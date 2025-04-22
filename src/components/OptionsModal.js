@@ -36,6 +36,7 @@ export default function OptionsModal({
               onPress={() => {
                 onClose();
                 onColorChange();
+                setShowColorPicker(true);
               }}>
               <Text style={styles.modalBtnText}>🎨 Editar cor</Text>
             </Pressable>
