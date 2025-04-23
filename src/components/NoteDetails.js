@@ -1,22 +1,15 @@
 import React, {useState, useContext} from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-} from 'react-native';
+import {View, Text, StyleSheet, Modal, TouchableOpacity} from 'react-native';
 import {useColorScheme} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {lightTheme, darkTheme} from '../theme/colors';
 import {NotesContext} from './NotesContext';
 import WheelColorPicker from 'react-native-wheel-color-picker';
-
+import ColorPickerModal from './ColorPickerModal';
 export default function NoteDetails({route}) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-
+  const [selectedColor, setSelectedColor] = useState('#FFFFFF');
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? darkTheme : lightTheme;
   const navigation = useNavigation();
@@ -26,23 +19,24 @@ export default function NoteDetails({route}) {
   const [currentNote, setCurrentNote] = useState(note);
 
   const handleColorChange = color => {
+    setSelectedColor(color);
     const updatedNote = {...currentNote, color};
     setCurrentNote(updatedNote);
     setNotes(prev =>
       prev.map(n => (n.id === updatedNote.id ? updatedNote : n)),
     );
-    setShowColorPicker(false);
   };
 
   return (
-    <Pressable
-      onLongPress={() => setShowEditModal(true)}
-      style={[styles.container, {backgroundColor: currentNote.color}]}>
+    <View style={[styles.container, {backgroundColor: currentNote.color}]}>
       <Text style={[styles.title, {color: themeColors.text}]}>
-        Nota: {currentNote.title}
+        {currentNote.title}
       </Text>
+      <TouchableOpacity
+        onLongPress={() => setShowEditModal(true)}
+        style={styles.contentBox}
+        activeOpacity={0.8}></TouchableOpacity>
 
-      {/* Modal de opções */}
       <Modal
         visible={showEditModal}
         transparent
@@ -56,7 +50,7 @@ export default function NoteDetails({route}) {
               style={styles.optionButton}
               onPress={() => {
                 setShowEditModal(false);
-                setShowColorPicker(true);
+                setTimeout(() => setShowColorPicker(true), 300);
               }}>
               <Text style={styles.optionText}>🎨 Editar cor</Text>
             </TouchableOpacity>
@@ -70,36 +64,24 @@ export default function NoteDetails({route}) {
         </View>
       </Modal>
 
-      {/* Modal do color picker */}
-      <Modal
-        visible={showColorPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowColorPicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerContainer}>
-            <Text style={styles.modalTitle}>Escolha uma cor</Text>
-            <WheelColorPicker
-              initialColor={currentNote.color}
-              onColorChangeComplete={handleColorChange}
-              thumbStyle={{height: 30, width: 30, borderRadius: 15}}
-              sliderSize={30}
-              style={{height: 300, width: '100%'}}
-            />
-            <TouchableOpacity
-              onPress={() => setShowColorPicker(false)}
-              style={{marginTop: 12}}>
-              <Text style={{color: 'blue', textAlign: 'center'}}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </Pressable>
+      {showColorPicker && (
+        <ColorPickerModal
+          visible={showColorPicker}
+          onClose={() => setShowColorPicker(false)}
+          currentColor={currentNote.color}
+          onColorChange={handleColorChange}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    paddingTop: 16,
+  },
+  contentBox: {
     flex: 1,
     padding: 20,
     justifyContent: 'center',
@@ -107,7 +89,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
+    fontWeight: 'bold',
+    marginLeft: 20,
+    marginTop: 10,
     marginBottom: 20,
+    alignSelf: 'flex-start',
+  },
+  hint: {
+    fontSize: 14,
+    color: '#555',
     textAlign: 'center',
   },
   modalOverlay: {
@@ -148,5 +138,13 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     width: '90%',
+  },
+  pickerWrapper: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    width: '90%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
