@@ -1,37 +1,58 @@
 import React, {useState, useContext} from 'react';
-import {View, Text, StyleSheet, Modal, TouchableOpacity} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ToastAndroid,
+} from 'react-native';
 import {useColorScheme} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {lightTheme, darkTheme} from '../theme/colors';
 import {NotesContext} from './NotesContext';
-import WheelColorPicker from 'react-native-wheel-color-picker';
 import ColorPickerModal from './ColorPickerModal';
+import {lightTheme, darkTheme} from '../theme/colors';
 export default function NoteDetails({route}) {
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedColor, setSelectedColor] = useState('#FFFFFF');
-  const colorScheme = useColorScheme();
-  const themeColors = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const navigation = useNavigation();
-
   const {note} = route.params;
   const {notes, setNotes} = useContext(NotesContext);
-  const [currentNote, setCurrentNote] = useState(note);
+  const [currentNote, setCurrentNote] = useState({
+    ...note,
+    color: note.color || '#FFFFFF',
+  });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
-  const handleColorChange = color => {
-    setSelectedColor(color);
-    const updatedNote = {...currentNote, color};
-    setCurrentNote(updatedNote);
-    setNotes(prev =>
-      prev.map(n => (n.id === updatedNote.id ? updatedNote : n)),
-    );
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const styles = getStyles(theme, colorScheme === 'dark');
+
+  const handleColorChange = async color => {
+    try {
+      const updatedNote = {...currentNote, color};
+      setCurrentNote(updatedNote);
+
+      const updatedNotes = notes.map(n =>
+        n.id === updatedNote.id ? updatedNote : n,
+      );
+
+      const success = await setNotes(updatedNotes);
+
+      if (success) {
+        ToastAndroid.show('Cor salva com sucesso!', ToastAndroid.SHORT);
+      } else {
+        ToastAndroid.show('Erro ao salvar cor', ToastAndroid.LONG);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar cor:', error);
+      ToastAndroid.show('Erro ao salvar cor', ToastAndroid.LONG);
+    }
   };
-
   return (
     <View style={[styles.container, {backgroundColor: currentNote.color}]}>
       <Text style={[styles.title, {color: themeColors.text}]}>
         {currentNote.title}
       </Text>
+
       <TouchableOpacity
         onLongPress={() => setShowEditModal(true)}
         style={styles.contentBox}
@@ -95,11 +116,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: 'flex-start',
   },
-  hint: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: '#00000088',
@@ -121,7 +138,7 @@ const styles = StyleSheet.create({
   optionButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#eee',
+    backgroundColor: theme.buttonBackground,
     borderRadius: 8,
     marginBottom: 10,
     width: '100%',
@@ -132,19 +149,5 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: 8,
-  },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    width: '90%',
-  },
-  pickerWrapper: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    width: '90%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

@@ -5,6 +5,11 @@ export const lightTheme = {
   border: '#ccc',
   placeholder: '#555',
   menuBg: '#eee',
+  modalBackground: '#fff',
+  modalOverlay: 'rgba(0, 0, 0, 0.5)',
+  borderColor: '#e0e0e0',
+  primary: '#db125f',
+  buttonText: '#fff',
 };
 
 export const darkTheme = {
@@ -14,4 +19,9 @@ export const darkTheme = {
   border: '#444',
   placeholder: '#aaa',
   menuBg: '#333',
+  modalBackground: '#2d2d2d',
+  modalOverlay: 'rgba(0, 0, 0, 0.8)',
+  borderColor: '#444',
+  primary: '#db125f',
+  buttonText: '#fff',
 };

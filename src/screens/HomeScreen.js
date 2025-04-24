@@ -1,5 +1,13 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, TextInput, FlatList, Pressable, Alert} from 'react-native';
+import React, {useState, useEffect, useContext} from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  Pressable,
+  Alert,
+  ToastAndroid,
+} from 'react-native';
 import {useColorScheme} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Header from '../components/Header';
@@ -9,84 +17,89 @@ import OptionsModal from '../components/OptionsModal';
 import {getStyles} from '../screens/homeStyles';
 import logo from '../assets/icons/icon.png';
 import {launchImageLibrary} from 'react-native-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {lightTheme, darkTheme} from '../theme/colors';
 import {NotesContext} from '../components/NotesContext';
-import {NotesProvider} from '../components/NotesContext';
+import ColorPickerModal from '../components/ColorPickerModal';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
-  const navigation = useNavigation();
   const [theme, setTheme] = useState(colorScheme);
   const themeColors = theme === 'dark' ? darkTheme : lightTheme;
   const styles = getStyles(themeColors, theme === 'dark');
 
-  const [notes, setNotes] = useState([]);
+  const {notes, setNotes} = useContext(NotesContext);
+  const navigation = useNavigation();
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [selectedNoteIndex, setSelectedNoteIndex] = useState(null);
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   useEffect(() => {
     const loadNotes = async () => {
       try {
-        const storedNotes = await AsyncStorage.getItem('notes');
+        const storedNotes = await AsyncStorage.getItem('@notes');
         if (storedNotes) {
           setNotes(JSON.parse(storedNotes));
         }
       } catch (error) {
-        console.log('Erro ao carregar notas do storage:', error);
+        console.log('Erro ao carregar notas:', error);
       }
     };
-
     loadNotes();
   }, []);
 
-  useEffect(() => {
-    const saveNotes = async () => {
-      try {
-        await AsyncStorage.setItem('notes', JSON.stringify(notes));
-      } catch (error) {
-        console.log('Erro ao salvar notas no storage:', error);
-      }
-    };
-
-    saveNotes();
-  }, [notes]);
-
-  const handleSaveNote = () => {
-    if (newTitle.trim() === '') return;
-
-    if (selectedNoteIndex !== null) {
-      const updatedNotes = [...notes];
-      updatedNotes[selectedNoteIndex].title = newTitle;
-      setNotes(updatedNotes);
-      setSelectedNoteIndex(null);
-    } else {
-      const newNote = {
-        id: Date.now().toString(),
-        title: newTitle,
-        icon: null,
-        color: themeColors.card,
-      };
-      setNotes([...notes, newNote]);
+  const handleSaveNote = async () => {
+    if (!newTitle.trim()) {
+      ToastAndroid.show('Digite um título para a nota', ToastAndroid.SHORT);
+      return;
     }
 
-    setNewTitle('');
-    setModalVisible(false);
+    try {
+      if (selectedNoteId) {
+        const updatedNotes = notes.map(note =>
+          note.id === selectedNoteId
+            ? {...note, title: newTitle, updatedAt: new Date().toISOString()}
+            : note,
+        );
+        await setNotes(updatedNotes);
+        ToastAndroid.show('Nota atualizada!', ToastAndroid.SHORT);
+      } else {
+        const newNote = {
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          title: newTitle,
+          content: '',
+          color: themeColors.card,
+          icon: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await setNotes([newNote, ...notes]);
+        ToastAndroid.show('Nota criada!', ToastAndroid.SHORT);
+      }
+
+      setNewTitle('');
+      setSelectedNoteId(null);
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Erro ao salvar nota:', error);
+      ToastAndroid.show('Erro ao salvar nota', ToastAndroid.LONG);
+    }
   };
 
-  const handleLongPress = index => {
-    setSelectedNoteIndex(index);
+  const handleLongPress = noteId => {
+    setSelectedNoteId(noteId);
     setOptionsModalVisible(true);
   };
 
   const handleEditNote = () => {
+    const noteToEdit = notes.find(note => note.id === selectedNoteId);
+    if (noteToEdit) {
+      setNewTitle(noteToEdit.title);
+      setModalVisible(true);
+    }
     setOptionsModalVisible(false);
-    const note = notes[selectedNoteIndex];
-    setNewTitle(note.title);
-    setModalVisible(true);
   };
 
   const handleDeleteNote = () => {
@@ -94,12 +107,18 @@ export default function HomeScreen() {
       {text: 'Cancelar', style: 'cancel'},
       {
         text: 'Excluir',
-        onPress: () => {
-          const updatedNotes = [...notes];
-          updatedNotes.splice(selectedNoteIndex, 1);
-          setNotes(updatedNotes);
-          setOptionsModalVisible(false);
-          setSelectedNoteIndex(null);
+        onPress: async () => {
+          try {
+            const updatedNotes = notes.filter(
+              note => note.id !== selectedNoteId,
+            );
+            await setNotes(updatedNotes);
+            setOptionsModalVisible(false);
+            setSelectedNoteId(null);
+            ToastAndroid.show('Nota excluída!', ToastAndroid.SHORT);
+          } catch (error) {
+            ToastAndroid.show('Erro ao excluir nota', ToastAndroid.LONG);
+          }
         },
         style: 'destructive',
       },
@@ -109,22 +128,36 @@ export default function HomeScreen() {
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
+    ToastAndroid.show(
+      `Tema ${newTheme === 'dark' ? 'escuro' : 'claro'} ativado`,
+      ToastAndroid.SHORT,
+    );
   };
 
-  const handleColorChange = () => {
-    setOptionsModalVisible(false);
-    const selectedNote = notes[selectedNoteIndex];
-    navigation.navigate('NoteDetails', {note: selectedNote});
+  const handleColorChange = async color => {
+    try {
+      const updatedNotes = notes.map(note =>
+        note.id === selectedNoteId ? {...note, color} : note,
+      );
+      await setNotes(updatedNotes);
+      setShowColorPicker(false);
+      ToastAndroid.show('Cor atualizada!', ToastAndroid.SHORT);
+    } catch (error) {
+      ToastAndroid.show('Erro ao salvar cor', ToastAndroid.LONG);
+    }
   };
 
   const handleImageChange = () => {
     launchImageLibrary({mediaType: 'photo'}, response => {
       if (response.didCancel) return;
-      if (response.assets && response.assets.length > 0) {
-        const selectedImageUri = response.assets[0].uri;
-        const updatedNotes = [...notes];
-        updatedNotes[selectedNoteIndex].icon = {uri: selectedImageUri};
+      if (response.assets?.[0]?.uri) {
+        const updatedNotes = notes.map(note =>
+          note.id === selectedNoteId
+            ? {...note, icon: {uri: response.assets[0].uri}}
+            : note,
+        );
         setNotes(updatedNotes);
+        ToastAndroid.show('Ícone atualizado!', ToastAndroid.SHORT);
       }
     });
     setOptionsModalVisible(false);
@@ -149,7 +182,7 @@ export default function HomeScreen() {
       <FlatList
         data={filteredNotes}
         keyExtractor={item => item.id}
-        renderItem={({item, index}) => (
+        renderItem={({item}) => (
           <NoteCard
             note={item}
             onPress={() =>
@@ -157,16 +190,23 @@ export default function HomeScreen() {
                 note: item,
               })
             }
-            onLongPress={() => handleLongPress(index)}
+            onLongPress={() => handleLongPress(item.id)}
             themeColors={themeColors}
           />
         )}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {searchText
+              ? 'Nenhuma nota encontrada'
+              : 'Nenhuma nota criada ainda'}
+          </Text>
+        }
       />
 
       <Pressable
         onPress={() => {
           setNewTitle('');
-          setSelectedNoteIndex(null);
+          setSelectedNoteId(null);
           setModalVisible(true);
         }}
         style={styles.addButton}>
@@ -177,7 +217,7 @@ export default function HomeScreen() {
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
-          setSelectedNoteIndex(null);
+          setSelectedNoteId(null);
           setNewTitle('');
         }}
         onSave={handleSaveNote}
@@ -193,10 +233,23 @@ export default function HomeScreen() {
         visible={optionsModalVisible}
         onClose={() => setOptionsModalVisible(false)}
         onEdit={handleEditNote}
-        onColorChange={handleColorChange}
+        onColorChange={() => {
+          setOptionsModalVisible(false);
+          setShowColorPicker(true);
+        }}
         onImageChange={handleImageChange}
         onDelete={handleDeleteNote}
         styles={styles}
+      />
+
+      <ColorPickerModal
+        visible={showColorPicker}
+        onClose={() => setShowColorPicker(false)}
+        currentColor={
+          notes.find(n => n.id === selectedNoteId)?.color || themeColors.card
+        }
+        onColorChange={handleColorChange}
+        theme={theme}
       />
     </View>
   );

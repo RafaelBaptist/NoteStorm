@@ -1,14 +1,80 @@
-import React, {useState} from 'react';
-import {Modal, View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  useColorScheme,
+} from 'react-native';
 import WheelColorPicker from 'react-native-wheel-color-picker';
+import {lightTheme, darkTheme} from '../theme/colors';
 
 export default function ColorPickerModal({
   visible,
   currentColor,
   onClose,
   onColorChange,
+  theme,
 }) {
+  const systemTheme = useColorScheme();
+  const activeTheme = theme || systemTheme;
+  const themeColors = activeTheme === 'dark' ? darkTheme : lightTheme;
+
   const [color, setColor] = useState(currentColor);
+
+  useEffect(() => {
+    setColor(currentColor);
+  }, [currentColor]);
+
+  const styles = StyleSheet.create({
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: themeColors.modalOverlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    pickerContainer: {
+      backgroundColor: themeColors.modalBackground,
+      padding: 20,
+      borderRadius: 16,
+      width: '90%',
+      maxWidth: 400,
+      borderWidth: 1,
+      borderColor: themeColors.borderColor,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 16,
+      textAlign: 'center',
+      color: themeColors.text,
+    },
+    colorPicker: {
+      width: '100%',
+      height: 300,
+      marginVertical: 20,
+    },
+    colorPreview: {
+      width: '100%',
+      height: 40,
+      borderRadius: 8,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: themeColors.borderColor,
+    },
+    closeButton: {
+      backgroundColor: themeColors.primary,
+      padding: 12,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    closeButtonText: {
+      color: themeColors.buttonText,
+      textAlign: 'center',
+      fontWeight: 'bold',
+    },
+  });
 
   return (
     <Modal
@@ -20,68 +86,26 @@ export default function ColorPickerModal({
         <View style={styles.pickerContainer}>
           <Text style={styles.modalTitle}>Escolha uma cor</Text>
 
-          <View style={styles.colorPreview} backgroundColor={color} />
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Aplicar Cor</Text>
-          </TouchableOpacity>
+          <View style={[styles.colorPreview, {backgroundColor: color}]} />
+
           <WheelColorPicker
             initialColor={currentColor}
-            onColorChange={color => {
-              setColor(color);
-              onColorChange(color);
-            }}
+            onColorChange={setColor}
             thumbSize={30}
             sliderSize={30}
             style={styles.colorPicker}
           />
+
+          <TouchableOpacity
+            onPress={() => {
+              onColorChange(color);
+              onClose();
+            }}
+            style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Aplicar Cor</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: '#000000AA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  colorPicker: {
-    width: '100%',
-    height: 300,
-    marginVertical: 20,
-  },
-  colorPreview: {
-    width: '100%',
-    height: 40,
-    borderRadius: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  closeButton: {
-    backgroundColor: '#db125f',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 3,
-  },
-  closeButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-});
