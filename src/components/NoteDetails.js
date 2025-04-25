@@ -8,10 +8,10 @@ import {
   ToastAndroid,
 } from 'react-native';
 import {useColorScheme} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import {NotesContext} from './NotesContext';
 import ColorPickerModal from './ColorPickerModal';
 import {lightTheme, darkTheme} from '../theme/colors';
+
 export default function NoteDetails({route}) {
   const {note} = route.params;
   const {notes, setNotes} = useContext(NotesContext);
@@ -24,7 +24,7 @@ export default function NoteDetails({route}) {
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const styles = getStyles(theme, colorScheme === 'dark');
+  const styles = getStyles(theme);
 
   const handleColorChange = async color => {
     try {
@@ -47,16 +47,16 @@ export default function NoteDetails({route}) {
       ToastAndroid.show('Erro ao salvar cor', ToastAndroid.LONG);
     }
   };
+
   return (
     <View style={[styles.container, {backgroundColor: currentNote.color}]}>
-      <Text style={[styles.title, {color: themeColors.text}]}>
-        {currentNote.title}
-      </Text>
+      <Text style={styles.title}>{currentNote.title}</Text>
 
       <TouchableOpacity
         onLongPress={() => setShowEditModal(true)}
         style={styles.contentBox}
-        activeOpacity={0.8}></TouchableOpacity>
+        activeOpacity={0.8}
+      />
 
       <Modal
         visible={showEditModal}
@@ -97,57 +97,63 @@ export default function NoteDetails({route}) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 16,
-  },
-  contentBox: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginLeft: 20,
-    marginTop: 10,
-    marginBottom: 20,
-    alignSelf: 'flex-start',
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: '#00000088',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    width: '80%',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  optionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: theme.buttonBackground,
-    borderRadius: 8,
-    marginBottom: 10,
-    width: '100%',
-  },
-  optionText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  cancelButton: {
-    marginTop: 8,
-  },
-});
+function getStyles(theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingTop: 16,
+    },
+    contentBox: {
+      flex: 1,
+      padding: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      marginLeft: 20,
+      marginTop: 10,
+      marginBottom: 20,
+      alignSelf: 'flex-start',
+      color: theme.text,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.modalOverlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: theme.modalBackground,
+      padding: 20,
+      borderRadius: 16,
+      width: '80%',
+      alignItems: 'center',
+      borderColor: theme.borderColor,
+      borderWidth: 1,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 16,
+      color: theme.text,
+    },
+    optionButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      backgroundColor: theme.primary,
+      borderRadius: 8,
+      marginBottom: 10,
+      width: '100%',
+    },
+    optionText: {
+      fontSize: 16,
+      textAlign: 'center',
+      color: theme.buttonText,
+    },
+    cancelButton: {
+      marginTop: 8,
+    },
+  });
+}

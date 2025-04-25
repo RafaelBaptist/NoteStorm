@@ -87,15 +87,6 @@ export default function ColorPickerModal({
           <Text style={styles.modalTitle}>Escolha uma cor</Text>
 
           <View style={[styles.colorPreview, {backgroundColor: color}]} />
-
-          <WheelColorPicker
-            initialColor={currentColor}
-            onColorChange={setColor}
-            thumbSize={30}
-            sliderSize={30}
-            style={styles.colorPicker}
-          />
-
           <TouchableOpacity
             onPress={() => {
               onColorChange(color);
@@ -104,6 +95,14 @@ export default function ColorPickerModal({
             style={styles.closeButton}>
             <Text style={styles.closeButtonText}>Aplicar Cor</Text>
           </TouchableOpacity>
+
+          <WheelColorPicker
+            initialColor={currentColor}
+            onColorChange={setColor}
+            thumbSize={30}
+            sliderSize={30}
+            style={styles.colorPicker}
+          />
         </View>
       </View>
     </Modal>
