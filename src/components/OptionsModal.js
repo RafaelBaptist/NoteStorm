@@ -15,6 +15,7 @@ export default function OptionsModal({
   onImageChange,
   onDelete,
   styles,
+  setShowColorPicker,
 }) {
   return (
     <Modal
@@ -35,7 +36,7 @@ export default function OptionsModal({
               style={styles.modalBtnEdit}
               onPress={() => {
                 onClose();
-                onColorChange();
+
                 setShowColorPicker(true);
               }}>
               <Text style={styles.modalBtnText}>🎨 Editar cor</Text>

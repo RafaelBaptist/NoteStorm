@@ -1,62 +1,92 @@
-import React, {useState, useContext} from 'react';
+import React, {useState, useContext, useEffect} from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  ToastAndroid,
+  ScrollView,
 } from 'react-native';
 import {useColorScheme} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NotesContext} from './NotesContext';
 import ColorPickerModal from './ColorPickerModal';
 import {lightTheme, darkTheme} from '../theme/colors';
 
-export default function NoteDetails({route}) {
+export default function NoteDetails({route, navigation}) {
   const {note} = route.params;
   const {notes, setNotes} = useContext(NotesContext);
   const [currentNote, setCurrentNote] = useState({
     ...note,
     color: note.color || '#FFFFFF',
+    content: note.content || '',
   });
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const styles = getStyles(theme);
 
-  const handleColorChange = async color => {
-    try {
-      const updatedNote = {...currentNote, color};
-      setCurrentNote(updatedNote);
-
-      const updatedNotes = notes.map(n =>
-        n.id === updatedNote.id ? updatedNote : n,
-      );
-
-      const success = await setNotes(updatedNotes);
-
-      if (success) {
-        ToastAndroid.show('Cor salva com sucesso!', ToastAndroid.SHORT);
-      } else {
-        ToastAndroid.show('Erro ao salvar cor', ToastAndroid.LONG);
+  useEffect(() => {
+    const saveNote = async () => {
+      try {
+        const updatedNotes = notes.map(n =>
+          n.id === currentNote.id ? currentNote : n,
+        );
+        await AsyncStorage.setItem('@notes', JSON.stringify(updatedNotes));
+        setNotes(updatedNotes);
+      } catch (error) {
+        console.error('Erro ao salvar nota:', error);
       }
-    } catch (error) {
-      console.error('Erro ao atualizar cor:', error);
-      ToastAndroid.show('Erro ao salvar cor', ToastAndroid.LONG);
-    }
+    };
+
+    const unsubscribeBlur = navigation.addListener('blur', saveNote);
+
+    saveNote();
+
+    return () => {
+      unsubscribeBlur();
+    };
+  }, [currentNote, navigation, notes, setNotes]);
+
+  const handleColorChange = async color => {
+    const updatedNote = {...currentNote, color};
+    setCurrentNote(updatedNote);
   };
 
   return (
     <View style={[styles.container, {backgroundColor: currentNote.color}]}>
       <Text style={styles.title}>{currentNote.title}</Text>
 
-      <TouchableOpacity
-        onLongPress={() => setShowEditModal(true)}
-        style={styles.contentBox}
-        activeOpacity={0.8}
-      />
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        {isEditingContent ? (
+          <TextInput
+            style={[styles.contentInput, {color: theme.text}]}
+            multiline
+            autoFocus
+            value={currentNote.content}
+            onChangeText={text =>
+              setCurrentNote({...currentNote, content: text})
+            }
+            onBlur={() => setIsEditingContent(false)}
+            placeholder="Digite o conteúdo da sua nota..."
+            placeholderTextColor={theme.placeholderText}
+          />
+        ) : (
+          <TouchableOpacity
+            style={styles.contentTextContainer}
+            onPress={() => setIsEditingContent(true)}
+            onLongPress={() => setShowEditModal(true)}
+            activeOpacity={0.7}>
+            <Text style={[styles.contentText, {color: theme.text}]}>
+              {currentNote.content || 'Toque para adicionar conteúdo...'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
 
       <Modal
         visible={showEditModal}
@@ -73,8 +103,18 @@ export default function NoteDetails({route}) {
                 setShowEditModal(false);
                 setTimeout(() => setShowColorPicker(true), 300);
               }}>
-              <Text style={styles.optionText}>🎨 Editar cor</Text>
+              <Text style={styles.optionText}>Editar cor</Text>
             </TouchableOpacity>
+
+            {/* <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowEditModal(false);
+                setIsEditingContent(true);
+              }}>
+              <Text style={styles.optionText}>Editar conteúdo</Text>
+            </TouchableOpacity> */}
+            {/* TRANSFORMAR EM EDITAR COR DO TITULO,OU TEXTO,TAMANHO ETC*/}
 
             <TouchableOpacity
               style={styles.cancelButton}
@@ -103,11 +143,9 @@ function getStyles(theme) {
       flex: 1,
       paddingTop: 16,
     },
-    contentBox: {
-      flex: 1,
-      padding: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
+    contentContainer: {
+      flexGrow: 1,
+      paddingHorizontal: 20,
     },
     title: {
       fontSize: 22,
@@ -117,6 +155,23 @@ function getStyles(theme) {
       marginBottom: 20,
       alignSelf: 'flex-start',
       color: theme.text,
+    },
+    contentInput: {
+      flex: 1,
+      fontSize: 16,
+      textAlignVertical: 'top',
+      padding: 15,
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      marginBottom: 20,
+    },
+    contentTextContainer: {
+      flex: 1,
+      padding: 15,
+    },
+    contentText: {
+      fontSize: 16,
+      lineHeight: 24,
     },
     modalOverlay: {
       flex: 1,
