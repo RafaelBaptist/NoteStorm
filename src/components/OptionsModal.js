@@ -16,6 +16,7 @@ export default function OptionsModal({
   onDelete,
   styles,
   setShowColorPicker,
+  selectedNoteId,
 }) {
   return (
     <Modal

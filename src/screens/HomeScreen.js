@@ -20,7 +20,7 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import {lightTheme, darkTheme} from '../theme/colors';
 import {NotesContext} from '../components/NotesContext';
 import ColorPickerModal from '../components/ColorPickerModal';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const [theme, setTheme] = useState(colorScheme);
@@ -148,16 +148,23 @@ export default function HomeScreen() {
   };
 
   const handleImageChange = () => {
-    launchImageLibrary({mediaType: 'photo'}, response => {
+    launchImageLibrary({mediaType: 'photo'}, async response => {
       if (response.didCancel) return;
       if (response.assets?.[0]?.uri) {
+        const imageUri = response.assets[0].uri;
         const updatedNotes = notes.map(note =>
-          note.id === selectedNoteId
-            ? {...note, icon: {uri: response.assets[0].uri}}
-            : note,
+          note.id === selectedNoteId ? {...note, icon: {uri: imageUri}} : note,
         );
+
         setNotes(updatedNotes);
-        ToastAndroid.show('Ícone atualizado!', ToastAndroid.SHORT);
+
+        try {
+          await AsyncStorage.setItem(`noteImage_${selectedNoteId}`, imageUri);
+          ToastAndroid.show('Ícone atualizado!', ToastAndroid.SHORT);
+        } catch (error) {
+          console.error('Erro ao salvar imagem:', error);
+          ToastAndroid.show('Erro ao salvar ícone', ToastAndroid.SHORT);
+        }
       }
     });
     setOptionsModalVisible(false);
