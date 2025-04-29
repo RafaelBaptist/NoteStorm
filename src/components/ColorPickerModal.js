@@ -1,28 +1,23 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import {
   Modal,
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  useColorScheme,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import WheelColorPicker from 'react-native-wheel-color-picker';
 import {lightTheme, darkTheme} from '../theme/colors';
-
+import {ThemeContext} from '../context/ThemeContext';
 export default function ColorPickerModal({
   visible,
   currentColor,
   onClose,
   onColorChange,
-  theme,
 }) {
-  const systemTheme = useColorScheme();
-  const activeTheme = theme || systemTheme;
-  const themeColors = activeTheme === 'dark' ? darkTheme : lightTheme;
-
+  const {theme, themeColors} = useContext(ThemeContext);
   const [color, setColor] = useState(currentColor);
-
   useEffect(() => {
     setColor(currentColor);
   }, [currentColor]);
@@ -48,7 +43,7 @@ export default function ColorPickerModal({
       fontWeight: 'bold',
       marginBottom: 16,
       textAlign: 'center',
-      color: themeColors.text,
+      color: themeColors.buttonText,
     },
     colorPicker: {
       width: '100%',
@@ -70,7 +65,7 @@ export default function ColorPickerModal({
       marginTop: 16,
     },
     closeButtonText: {
-      color: themeColors.buttonText,
+      color: '#fff',
       textAlign: 'center',
       fontWeight: 'bold',
     },
@@ -82,29 +77,31 @@ export default function ColorPickerModal({
       transparent
       animationType="slide"
       onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.pickerContainer}>
-          <Text style={styles.modalTitle}>Escolha uma cor</Text>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.pickerContainer}>
+            <Text style={styles.modalTitle}>Escolha uma cor</Text>
 
-          <View style={[styles.colorPreview, {backgroundColor: color}]} />
-          <TouchableOpacity
-            onPress={() => {
-              onColorChange(color);
-              onClose();
-            }}
-            style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Aplicar Cor</Text>
-          </TouchableOpacity>
+            <View style={[styles.colorPreview, {backgroundColor: color}]} />
+            <TouchableOpacity
+              onPress={() => {
+                onColorChange(color);
+                onClose();
+              }}
+              style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Aplicar Cor</Text>
+            </TouchableOpacity>
 
-          <WheelColorPicker
-            initialColor={currentColor}
-            onColorChange={setColor}
-            thumbSize={30}
-            sliderSize={30}
-            style={styles.colorPicker}
-          />
+            <WheelColorPicker
+              initialColor={currentColor}
+              onColorChange={setColor}
+              thumbSize={30}
+              sliderSize={30}
+              style={styles.colorPicker}
+            />
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }

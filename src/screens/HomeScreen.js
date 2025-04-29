@@ -8,7 +8,6 @@ import {
   Alert,
   ToastAndroid,
 } from 'react-native';
-import {useColorScheme} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Header from '../components/Header';
 import NoteCard from '../components/NoteCard';
@@ -17,18 +16,16 @@ import OptionsModal from '../components/OptionsModal';
 import {getStyles} from '../screens/homeStyles';
 import logo from '../assets/icons/icon.png';
 import {launchImageLibrary} from 'react-native-image-picker';
-import {lightTheme, darkTheme} from '../theme/colors';
 import {NotesContext} from '../components/NotesContext';
 import ColorPickerModal from '../components/ColorPickerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export default function HomeScreen() {
-  const colorScheme = useColorScheme();
-  const [theme, setTheme] = useState(colorScheme);
-  const themeColors = theme === 'dark' ? darkTheme : lightTheme;
-  const styles = getStyles(themeColors, theme === 'dark');
+import {ThemeContext} from '../context/ThemeContext';
 
+export default function HomeScreen() {
+  const {theme, toggleTheme, themeColors} = useContext(ThemeContext);
   const {notes, setNotes} = useContext(NotesContext);
   const navigation = useNavigation();
+
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -36,12 +33,28 @@ export default function HomeScreen() {
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
+  const styles = getStyles(themeColors, theme === 'dark');
+
   useEffect(() => {
     const loadNotes = async () => {
       try {
         const storedNotes = await AsyncStorage.getItem('@notes');
         if (storedNotes) {
-          setNotes(JSON.parse(storedNotes));
+          const parsedNotes = JSON.parse(storedNotes);
+
+          const notesWithImages = await Promise.all(
+            parsedNotes.map(async note => {
+              if (note.id) {
+                const savedImage = await AsyncStorage.getItem(
+                  `noteImage_${note.id}`,
+                );
+                return savedImage ? {...note, icon: {uri: savedImage}} : note;
+              }
+              return note;
+            }),
+          );
+
+          setNotes(notesWithImages);
         }
       } catch (error) {
         console.log('Erro ao carregar notas:', error);
@@ -57,13 +70,13 @@ export default function HomeScreen() {
     }
 
     try {
+      let updatedNotes;
       if (selectedNoteId) {
-        const updatedNotes = notes.map(note =>
+        updatedNotes = notes.map(note =>
           note.id === selectedNoteId
             ? {...note, title: newTitle, updatedAt: new Date().toISOString()}
             : note,
         );
-        await setNotes(updatedNotes);
         ToastAndroid.show('Nota atualizada!', ToastAndroid.SHORT);
       } else {
         const newNote = {
@@ -75,10 +88,12 @@ export default function HomeScreen() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        await setNotes([newNote, ...notes]);
+        updatedNotes = [newNote, ...notes];
         ToastAndroid.show('Nota criada!', ToastAndroid.SHORT);
       }
 
+      await AsyncStorage.setItem('@notes', JSON.stringify(updatedNotes));
+      setNotes(updatedNotes);
       setNewTitle('');
       setSelectedNoteId(null);
       setModalVisible(false);
@@ -102,7 +117,7 @@ export default function HomeScreen() {
     setOptionsModalVisible(false);
   };
 
-  const handleDeleteNote = () => {
+  const handleDeleteNote = async () => {
     Alert.alert('Confirmar', 'Tem certeza que deseja excluir essa nota?', [
       {text: 'Cancelar', style: 'cancel'},
       {
@@ -112,7 +127,9 @@ export default function HomeScreen() {
             const updatedNotes = notes.filter(
               note => note.id !== selectedNoteId,
             );
-            await setNotes(updatedNotes);
+            await AsyncStorage.setItem('@notes', JSON.stringify(updatedNotes));
+            await AsyncStorage.removeItem(`noteImage_${selectedNoteId}`);
+            setNotes(updatedNotes);
             setOptionsModalVisible(false);
             setSelectedNoteId(null);
             ToastAndroid.show('Nota excluída!', ToastAndroid.SHORT);
@@ -125,21 +142,13 @@ export default function HomeScreen() {
     ]);
   };
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    ToastAndroid.show(
-      `Tema ${newTheme === 'dark' ? 'escuro' : 'claro'} ativado`,
-      ToastAndroid.SHORT,
-    );
-  };
-
   const handleColorChange = async color => {
     try {
       const updatedNotes = notes.map(note =>
         note.id === selectedNoteId ? {...note, color} : note,
       );
-      await setNotes(updatedNotes);
+      await AsyncStorage.setItem('@notes', JSON.stringify(updatedNotes));
+      setNotes(updatedNotes);
       setShowColorPicker(false);
       ToastAndroid.show('Cor atualizada!', ToastAndroid.SHORT);
     } catch (error) {
@@ -156,10 +165,10 @@ export default function HomeScreen() {
           note.id === selectedNoteId ? {...note, icon: {uri: imageUri}} : note,
         );
 
-        setNotes(updatedNotes);
-
         try {
+          await AsyncStorage.setItem('@notes', JSON.stringify(updatedNotes));
           await AsyncStorage.setItem(`noteImage_${selectedNoteId}`, imageUri);
+          setNotes(updatedNotes);
           ToastAndroid.show('Ícone atualizado!', ToastAndroid.SHORT);
         } catch (error) {
           console.error('Erro ao salvar imagem:', error);
@@ -176,7 +185,13 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Header styles={styles} logo={logo} onMenuPress={() => {}} />
+      <Header
+        styles={styles}
+        logo={logo}
+        onMenuPress={() => {}}
+        toggleTheme={toggleTheme}
+        theme={theme}
+      />
 
       <TextInput
         style={styles.search}
@@ -216,7 +231,7 @@ export default function HomeScreen() {
           setSelectedNoteId(null);
           setModalVisible(true);
         }}
-        style={styles.addButton}>
+        style={[styles.addButton, {backgroundColor: themeColors.primary}]}>
         <Text style={styles.addText}>+</Text>
       </Pressable>
 
@@ -233,7 +248,6 @@ export default function HomeScreen() {
         toggleTheme={toggleTheme}
         theme={theme}
         styles={styles}
-        isDark={theme === 'dark'}
       />
 
       <OptionsModal
@@ -247,6 +261,7 @@ export default function HomeScreen() {
         onImageChange={handleImageChange}
         onDelete={handleDeleteNote}
         styles={styles}
+        themeColors={themeColors}
       />
 
       <ColorPickerModal
@@ -257,6 +272,7 @@ export default function HomeScreen() {
         }
         onColorChange={handleColorChange}
         theme={theme}
+        themeColors={themeColors}
       />
     </View>
   );

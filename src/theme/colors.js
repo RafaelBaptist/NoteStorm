@@ -9,7 +9,7 @@ export const lightTheme = {
   modalOverlay: 'rgba(0, 0, 0, 0.5)',
   borderColor: '#e0e0e0',
   primary: '#db125f',
-  buttonText: '#fff',
+  buttonText: '#000',
 };
 
 export const darkTheme = {

@@ -8,27 +8,41 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import {useColorScheme} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NotesContext} from './NotesContext';
+import {ThemeContext} from '../context/ThemeContext';
 import ColorPickerModal from './ColorPickerModal';
-import {lightTheme, darkTheme} from '../theme/colors';
 
 export default function NoteDetails({route, navigation}) {
   const {note} = route.params;
   const {notes, setNotes} = useContext(NotesContext);
+  const {themeColors} = useContext(ThemeContext);
+
   const [currentNote, setCurrentNote] = useState({
     ...note,
-    color: note.color || '#FFFFFF',
+    color: note.color || themeColors.card,
     content: note.content || '',
   });
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
 
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const styles = getStyles(theme);
+  const styles = getStyles(themeColors);
+
+  const getTextColor = backgroundColor => {
+    if (!backgroundColor) return '#000000';
+
+    const hex = backgroundColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+  };
+
+  const textColor = getTextColor(currentNote.color);
 
   useEffect(() => {
     const saveNote = async () => {
@@ -44,7 +58,6 @@ export default function NoteDetails({route, navigation}) {
     };
 
     const unsubscribeBlur = navigation.addListener('blur', saveNote);
-
     saveNote();
 
     return () => {
@@ -59,12 +72,34 @@ export default function NoteDetails({route, navigation}) {
 
   return (
     <View style={[styles.container, {backgroundColor: currentNote.color}]}>
-      <Text style={styles.title}>{currentNote.title}</Text>
+      <Text
+        style={[
+          styles.title,
+          {
+            color: textColor,
+            textShadowColor:
+              textColor === '#FFFFFF'
+                ? 'rgba(0,0,0,0.3)'
+                : 'rgba(255,255,255,0.3)',
+            textShadowOffset: {width: 1, height: 1},
+            textShadowRadius: 2,
+          },
+        ]}>
+        {currentNote.title}
+      </Text>
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
         {isEditingContent ? (
           <TextInput
-            style={[styles.contentInput, {color: theme.text}]}
+            style={[
+              styles.contentInput,
+              {
+                color: textColor,
+                backgroundColor: currentNote.color,
+                textShadowColor:
+                  textColor === '#FFFFFF' ? 'rgba(0,0,0,0.3)' : 'transparent',
+              },
+            ]}
             multiline
             autoFocus
             value={currentNote.content}
@@ -73,7 +108,7 @@ export default function NoteDetails({route, navigation}) {
             }
             onBlur={() => setIsEditingContent(false)}
             placeholder="Digite o conteúdo da sua nota..."
-            placeholderTextColor={theme.placeholderText}
+            placeholderTextColor={themeColors.placeholder}
           />
         ) : (
           <TouchableOpacity
@@ -81,7 +116,17 @@ export default function NoteDetails({route, navigation}) {
             onPress={() => setIsEditingContent(true)}
             onLongPress={() => setShowEditModal(true)}
             activeOpacity={0.7}>
-            <Text style={[styles.contentText, {color: theme.text}]}>
+            <Text
+              style={[
+                styles.contentText,
+                {
+                  color: textColor,
+                  textShadowColor:
+                    textColor === '#FFFFFF' ? 'rgba(0,0,0,0.3)' : 'transparent',
+                  textShadowOffset: {width: 1, height: 1},
+                  textShadowRadius: 2,
+                },
+              ]}>
               {currentNote.content || 'Toque para adicionar conteúdo...'}
             </Text>
           </TouchableOpacity>
@@ -106,20 +151,13 @@ export default function NoteDetails({route, navigation}) {
               <Text style={styles.optionText}>Editar cor</Text>
             </TouchableOpacity>
 
-            {/* <TouchableOpacity
-              style={styles.optionButton}
-              onPress={() => {
-                setShowEditModal(false);
-                setIsEditingContent(true);
-              }}>
-              <Text style={styles.optionText}>Editar conteúdo</Text>
-            </TouchableOpacity> */}
-            {/* TRANSFORMAR EM EDITAR COR DO TITULO,OU TEXTO,TAMANHO ETC*/}
-
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowEditModal(false)}>
-              <Text style={[styles.optionText, {color: 'red'}]}>Cancelar</Text>
+              <Text
+                style={[styles.optionText, {color: themeColors.buttonText}]}>
+                Cancelar
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -137,7 +175,7 @@ export default function NoteDetails({route, navigation}) {
   );
 }
 
-function getStyles(theme) {
+function getStyles(themeColors) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -154,14 +192,12 @@ function getStyles(theme) {
       marginTop: 10,
       marginBottom: 20,
       alignSelf: 'flex-start',
-      color: theme.text,
     },
     contentInput: {
       flex: 1,
       fontSize: 16,
       textAlignVertical: 'top',
       padding: 15,
-      backgroundColor: theme.inputBackground,
       borderRadius: 10,
       marginBottom: 20,
     },
@@ -175,29 +211,29 @@ function getStyles(theme) {
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: theme.modalOverlay,
+      backgroundColor: 'rgba(0,0,0,0.5)',
       justifyContent: 'center',
       alignItems: 'center',
     },
     modalContent: {
-      backgroundColor: theme.modalBackground,
+      backgroundColor: themeColors.modalBackground,
       padding: 20,
       borderRadius: 16,
       width: '80%',
       alignItems: 'center',
-      borderColor: theme.borderColor,
+      borderColor: themeColors.border,
       borderWidth: 1,
     },
     modalTitle: {
       fontSize: 18,
       fontWeight: 'bold',
       marginBottom: 16,
-      color: theme.text,
+      color: themeColors.text,
     },
     optionButton: {
       paddingVertical: 10,
       paddingHorizontal: 20,
-      backgroundColor: theme.primary,
+      backgroundColor: themeColors.primary,
       borderRadius: 8,
       marginBottom: 10,
       width: '100%',
@@ -205,7 +241,7 @@ function getStyles(theme) {
     optionText: {
       fontSize: 16,
       textAlign: 'center',
-      color: theme.buttonText,
+      color: themeColors.buttonText,
     },
     cancelButton: {
       marginTop: 8,
