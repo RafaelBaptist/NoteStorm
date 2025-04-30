@@ -21,16 +21,20 @@ export default function NoteDetails({route, navigation}) {
   const [currentNote, setCurrentNote] = useState({
     ...note,
     color: note.color || themeColors.card,
+    titleColor: note.titleColor || '#000000',
+    textColor: note.textColor || '#000000',
     content: note.content || '',
   });
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showTextColorPicker, setShowTextColorPicker] = useState(false);
+  const [showTitleColorPicker, setShowTitleColorPicker] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
 
   const styles = getStyles(themeColors);
 
-  const getTextColor = backgroundColor => {
+  const getContrastColor = backgroundColor => {
     if (!backgroundColor) return '#000000';
 
     const hex = backgroundColor.replace('#', '');
@@ -41,8 +45,6 @@ export default function NoteDetails({route, navigation}) {
 
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
-
-  const textColor = getTextColor(currentNote.color);
 
   useEffect(() => {
     const saveNote = async () => {
@@ -65,9 +67,14 @@ export default function NoteDetails({route, navigation}) {
     };
   }, [currentNote, navigation, notes, setNotes]);
 
-  const handleColorChange = async color => {
-    const updatedNote = {...currentNote, color};
-    setCurrentNote(updatedNote);
+  const handleColorChange = async (color, type) => {
+    if (type === 'background') {
+      setCurrentNote({...currentNote, color});
+    } else if (type === 'text') {
+      setCurrentNote({...currentNote, textColor: color});
+    } else if (type === 'title') {
+      setCurrentNote({...currentNote, titleColor: color});
+    }
   };
 
   return (
@@ -76,9 +83,9 @@ export default function NoteDetails({route, navigation}) {
         style={[
           styles.title,
           {
-            color: textColor,
+            color: currentNote.titleColor,
             textShadowColor:
-              textColor === '#FFFFFF'
+              getContrastColor(currentNote.color) === '#FFFFFF'
                 ? 'rgba(0,0,0,0.3)'
                 : 'rgba(255,255,255,0.3)',
             textShadowOffset: {width: 1, height: 1},
@@ -94,10 +101,12 @@ export default function NoteDetails({route, navigation}) {
             style={[
               styles.contentInput,
               {
-                color: textColor,
+                color: currentNote.textColor,
                 backgroundColor: currentNote.color,
                 textShadowColor:
-                  textColor === '#FFFFFF' ? 'rgba(0,0,0,0.3)' : 'transparent',
+                  getContrastColor(currentNote.color) === '#FFFFFF'
+                    ? 'rgba(0,0,0,0.3)'
+                    : 'transparent',
               },
             ]}
             multiline
@@ -120,9 +129,11 @@ export default function NoteDetails({route, navigation}) {
               style={[
                 styles.contentText,
                 {
-                  color: textColor,
+                  color: currentNote.textColor,
                   textShadowColor:
-                    textColor === '#FFFFFF' ? 'rgba(0,0,0,0.3)' : 'transparent',
+                    getContrastColor(currentNote.color) === '#FFFFFF'
+                      ? 'rgba(0,0,0,0.3)'
+                      : 'transparent',
                   textShadowOffset: {width: 1, height: 1},
                   textShadowRadius: 2,
                 },
@@ -148,7 +159,25 @@ export default function NoteDetails({route, navigation}) {
                 setShowEditModal(false);
                 setTimeout(() => setShowColorPicker(true), 300);
               }}>
-              <Text style={styles.optionText}>Editar cor</Text>
+              <Text style={styles.optionText}>Alterar cor do fundo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowEditModal(false);
+                setTimeout(() => setShowTitleColorPicker(true), 300);
+              }}>
+              <Text style={styles.optionText}>Alterar cor do título</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowEditModal(false);
+                setTimeout(() => setShowTextColorPicker(true), 300);
+              }}>
+              <Text style={styles.optionText}>Alterar cor do texto</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -168,7 +197,25 @@ export default function NoteDetails({route, navigation}) {
           visible={showColorPicker}
           onClose={() => setShowColorPicker(false)}
           currentColor={currentNote.color}
-          onColorChange={handleColorChange}
+          onColorChange={color => handleColorChange(color, 'background')}
+        />
+      )}
+
+      {showTitleColorPicker && (
+        <ColorPickerModal
+          visible={showTitleColorPicker}
+          onClose={() => setShowTitleColorPicker(false)}
+          currentColor={currentNote.titleColor}
+          onColorChange={color => handleColorChange(color, 'title')}
+        />
+      )}
+
+      {showTextColorPicker && (
+        <ColorPickerModal
+          visible={showTextColorPicker}
+          onClose={() => setShowTextColorPicker(false)}
+          currentColor={currentNote.textColor}
+          onColorChange={color => handleColorChange(color, 'text')}
         />
       )}
     </View>
