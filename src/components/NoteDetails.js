@@ -7,11 +7,15 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  Image,
+  Alert,
 } from 'react-native';
+import {launchImageLibrary} from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NotesContext} from './NotesContext';
 import {ThemeContext} from '../context/ThemeContext';
 import ColorPickerModal from './ColorPickerModal';
+import NoteImage from './NoteImage';
 
 export default function NoteDetails({route, navigation}) {
   const {note} = route.params;
@@ -24,6 +28,9 @@ export default function NoteDetails({route, navigation}) {
     titleColor: note.titleColor || '#000000',
     textColor: note.textColor || '#000000',
     content: note.content || '',
+    image: note.image || null,
+    imagePosition: note.imagePosition || 'top',
+    imageSize: note.imageSize || 'medium',
   });
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -32,7 +39,7 @@ export default function NoteDetails({route, navigation}) {
   const [showTitleColorPicker, setShowTitleColorPicker] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
 
-  const styles = getStyles(themeColors);
+  const styles = getStyles(themeColors, currentNote);
 
   const getContrastColor = backgroundColor => {
     if (!backgroundColor) return '#000000';
@@ -77,25 +84,31 @@ export default function NoteDetails({route, navigation}) {
     }
   };
 
-  return (
-    <View style={[styles.container, {backgroundColor: currentNote.color}]}>
-      <Text
-        style={[
-          styles.title,
-          {
-            color: currentNote.titleColor,
-            textShadowColor:
-              getContrastColor(currentNote.color) === '#FFFFFF'
-                ? 'rgba(0,0,0,0.3)'
-                : 'rgba(255,255,255,0.3)',
-            textShadowOffset: {width: 1, height: 1},
-            textShadowRadius: 2,
-          },
-        ]}>
-        {currentNote.title}
-      </Text>
+  const handleImagePick = () => {
+    launchImageLibrary({mediaType: 'photo'}, response => {
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+        return;
+      }
 
-      <ScrollView contentContainerStyle={styles.contentContainer}>
+      const imageUri = response.assets[0].uri;
+      setCurrentNote({...currentNote, image: imageUri});
+      setShowEditModal(false);
+    });
+  };
+
+  const handleImagePositionChange = position => {
+    setCurrentNote({...currentNote, imagePosition: position});
+  };
+
+  const handleImageSizeChange = size => {
+    setCurrentNote({...currentNote, imageSize: size});
+  };
+
+  const renderContentWithImage = () => {
+    const content = (
+      <>
         {isEditingContent ? (
           <TextInput
             style={[
@@ -142,6 +155,79 @@ export default function NoteDetails({route, navigation}) {
             </Text>
           </TouchableOpacity>
         )}
+      </>
+    );
+
+    switch (currentNote.imagePosition) {
+      case 'top':
+        return (
+          <>
+            <NoteImage
+              imageUri={currentNote.image}
+              position={currentNote.imagePosition}
+              size={currentNote.imageSize}
+            />
+            {content}
+          </>
+        );
+      case 'bottom':
+        return (
+          <>
+            {content}
+            <NoteImage
+              imageUri={currentNote.image}
+              position={currentNote.imagePosition}
+              size={currentNote.imageSize}
+            />
+          </>
+        );
+      case 'left':
+        return (
+          <View style={styles.rowContainer}>
+            <NoteImage
+              imageUri={currentNote.image}
+              position={currentNote.imagePosition}
+              size={currentNote.imageSize}
+            />
+            <View style={styles.textContainer}>{content}</View>
+          </View>
+        );
+      case 'right':
+        return (
+          <View style={styles.rowContainer}>
+            <View style={styles.textContainer}>{content}</View>
+            <NoteImage
+              imageUri={currentNote.image}
+              position={currentNote.imagePosition}
+              size={currentNote.imageSize}
+            />
+          </View>
+        );
+      default:
+        return content;
+    }
+  };
+
+  return (
+    <View style={[styles.container, {backgroundColor: currentNote.color}]}>
+      <Text
+        style={[
+          styles.title,
+          {
+            color: currentNote.titleColor,
+            textShadowColor:
+              getContrastColor(currentNote.color) === '#FFFFFF'
+                ? 'rgba(0,0,0,0.3)'
+                : 'rgba(255,255,255,0.3)',
+            textShadowOffset: {width: 1, height: 1},
+            textShadowRadius: 2,
+          },
+        ]}>
+        {currentNote.title}
+      </Text>
+
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        {renderContentWithImage()}
       </ScrollView>
 
       <Modal
@@ -181,10 +267,61 @@ export default function NoteDetails({route, navigation}) {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={styles.optionButton}
+              onPress={handleImagePick}>
+              <Text style={styles.optionText}>
+                {currentNote.image ? 'Alterar imagem' : 'Adicionar imagem'}
+              </Text>
+            </TouchableOpacity>
+
+            {currentNote.image && (
+              <>
+                <Text style={styles.sectionTitle}>Posição da Imagem</Text>
+                <View style={styles.positionOptions}>
+                  {['top', 'bottom', 'left', 'right'].map(position => (
+                    <TouchableOpacity
+                      key={position}
+                      style={[
+                        styles.positionButton,
+                        currentNote.imagePosition === position &&
+                          styles.selectedPosition,
+                      ]}
+                      onPress={() => handleImagePositionChange(position)}>
+                      <Text style={styles.positionButtonText}>
+                        {position === 'top' && 'Topo'}
+                        {position === 'bottom' && 'Rodapé'}
+                        {position === 'left' && 'Esquerda'}
+                        {position === 'right' && 'Direita'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.sectionTitle}>Tamanho da Imagem</Text>
+                <View style={styles.sizeOptions}>
+                  {['small', 'medium', 'large'].map(size => (
+                    <TouchableOpacity
+                      key={size}
+                      style={[
+                        styles.sizeButton,
+                        currentNote.imageSize === size && styles.selectedSize,
+                      ]}
+                      onPress={() => handleImageSizeChange(size)}>
+                      <Text style={styles.sizeButtonText}>
+                        {size === 'small' && 'Pequeno'}
+                        {size === 'medium' && 'Médio'}
+                        {size === 'large' && 'Grande'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowEditModal(false)}>
-              <Text
-                style={[styles.optionText, {color: themeColors.buttonText}]}>
+              <Text style={[styles.optionText, {color: themeColors.danger}]}>
                 Cancelar
               </Text>
             </TouchableOpacity>
@@ -222,15 +359,26 @@ export default function NoteDetails({route, navigation}) {
   );
 }
 
-function getStyles(themeColors) {
-  return StyleSheet.create({
+const getStyles = (themeColors, note) =>
+  StyleSheet.create({
     container: {
       flex: 1,
       paddingTop: 16,
     },
     contentContainer: {
       flexGrow: 1,
-      paddingHorizontal: 20,
+      paddingHorizontal:
+        note?.imagePosition === 'left' || note?.imagePosition === 'right'
+          ? 0
+          : 20,
+    },
+    rowContainer: {
+      flexDirection: 'row',
+      flex: 1,
+    },
+    textContainer: {
+      flex: 1,
+      padding: 15,
     },
     title: {
       fontSize: 22,
@@ -270,12 +418,21 @@ function getStyles(themeColors) {
       alignItems: 'center',
       borderColor: themeColors.border,
       borderWidth: 1,
+      maxHeight: '80%',
     },
     modalTitle: {
       fontSize: 18,
       fontWeight: 'bold',
       marginBottom: 16,
       color: themeColors.text,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginTop: 10,
+      marginBottom: 5,
+      color: themeColors.text,
+      alignSelf: 'flex-start',
     },
     optionButton: {
       paddingVertical: 10,
@@ -290,8 +447,48 @@ function getStyles(themeColors) {
       textAlign: 'center',
       color: themeColors.buttonText,
     },
+    positionOptions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      width: '100%',
+      marginBottom: 10,
+    },
+    positionButton: {
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: themeColors.card,
+      margin: 2,
+      width: '48%',
+    },
+    selectedPosition: {
+      backgroundColor: themeColors.primary,
+    },
+    positionButtonText: {
+      color: themeColors.text,
+      textAlign: 'center',
+    },
+    sizeOptions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+      marginBottom: 10,
+    },
+    sizeButton: {
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: themeColors.card,
+      margin: 2,
+      width: '32%',
+    },
+    selectedSize: {
+      backgroundColor: themeColors.primary,
+    },
+    sizeButtonText: {
+      color: themeColors.text,
+      textAlign: 'center',
+    },
     cancelButton: {
       marginTop: 8,
     },
   });
-}
